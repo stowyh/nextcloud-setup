@@ -1,128 +1,140 @@
-# Make your own self-hosted cloud storage
+# Create Your Own Self-Hosted Cloud Storage
+
 ## Benefits
-- More privacy and security
-- Cost-Effectiveness
-- Scalability
-- More Control and Customisation
+- Enhanced privacy and security
+- Cost-effective
+- Scalable
+- Greater control and customization
 
 ## Prerequisites
-- A computer running Ubuntu or any Debian flavor.
-- Check if your ISP allows you to enable port-forward [Optional]
+- A computer running Ubuntu or any Debian-based distribution.
+- Verify if your ISP allows port forwarding [Optional]
 - Own a domain [Optional]
 
-## Initial server setup
-#### Update your Linux distribution
-```Bash
+## Initial Server Setup
+
+### Update Your Linux Distribution
+```bash
 sudo apt update
 sudo apt full-upgrade
 sudo apt autoremove
 ```
-- Install all necessary packages (some may be optional based on your requirements)
+
+### Install Necessary Packages
 ```bash
 sudo apt install neovim wget mariadb-server php php-apcu php-bcmath php-cli php-common php-curl php-gd php-gmp php-imagick php-intl php-mbstring php-mysql php-zip php-xml unzip nmap
 ```
 
-#### Update your hostname (Optional)
-- Modify the file and assign an appropriate hostname or domain name to your server
+### Update Your Hostname (Optional)
+- Modify the file to assign an appropriate hostname or domain name to your server.
 
 ```bash
 sudo nvim /etc/hostname
 ```
 ![hostname.png](pictures/hostname.png)
+
 ```bash
 sudo nvim /etc/hosts
 ```
 ![hosts.png](pictures/hosts.png)
-+ Restart your server to apply the changes made thus far
+
+- Restart your server to apply the changes.
 
 ```bash
 sudo reboot
 ```
 
-### Downloading Nextcloud
-+ Download the Nextcloud ZIP file
+## Downloading Nextcloud
+- Download the Nextcloud ZIP file.
+
 ```bash
 wget https://download.nextcloud.com/server/releases/latest.zip
 ```
-### MariaDB Setup
-+ Check the status of the `mariadb` service
+
+## MariaDB Setup
+- Check the status of the `mariadb` service.
+
 ```bash
 systemctl status mariadb
 ```
-+ Run the secure installation script
+
+- Run the secure installation script.
+
 ```bash
 sudo mysql_secure_installation
-````
-- Then you should see a several question. Answer following the provided input below
 ```
-Password prompt --> Click Enter key
+
+- Follow the prompts with the provided inputs:
+
+```
+Password prompt --> Press Enter
 Switch to unix_socket_auth [Y/n] --> n
 Change the root password [Y/n] --> Y
-Enter your secure password: 
+Enter your secure password:
 Remove anonymous users [Y/n] --> Y
 Disallow root login remotely [Y/n] --> Y
 Remove test database and access to it [Y/n] --> Y
-Reload privileges tables now [Y/n] --> Y
+Reload privilege tables now [Y/n] --> Y
 ```
 
-### Setting up the Nextcloud Database
-+ Access to MariaDB
+## Setting Up the Nextcloud Database
+- Access MariaDB.
+
 ```bash
 sudo mariadb
 ```
-- Create the database
+
+- Create the database.
+
 ```sql
 CREATE DATABASE nextcloud;
 ```
-+ Set-up permissions
+
+- Set up permissions.
+
 ```sql
 GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'localhost' IDENTIFIED BY 'mypassword';
-  
 FLUSH PRIVILEGES;
 ```
-+ Press CTRL+D to exit
 
-### Apache WebServer
+- Exit by pressing `CTRL+D`.
 
-+ Enable these PHP extensions
+## Apache Web Server
+
+- Enable the necessary PHP extensions.
 
 ```bash
 sudo phpenmod bcmath gmp imagick intl
 ```
-+ Unzip the Nextcloud file
+
+- Unzip the Nextcloud file.
 
 ```bash
 unzip latest.zip
 ```
-+ Move the files to the serving location and set the appropriate permissions
+
+- Move the files to the serving location and set the appropriate permissions.
 
 ```bash
 mv nextcloud your.domain.name
-```
-+ Change permissions
-
-```bash
 sudo chown -R www-data:www-data your.domain.name
-```
-+ Move the directory to /var/www
-
-```bash
 sudo mv your.domain.name /var/www
 ```
-- Disable the default site for apache
+
+- Disable the default Apache site.
 
 ```bash
 sudo a2dissite 000-default.conf
 ```
 
-### Configure Nextcloud host
-- Create an Apache config file for serving Nextcloud
+## Configure Nextcloud Host
+- Create an Apache config file for serving Nextcloud.
 
 ```bash
 sudo nvim /etc/apache2/sites-available/your.domain.name.conf
 ```
 
-* Insert the provided content into the file, ensuring to modify the part that mentions 'your.domain.name'
+- Insert the following content into the file, modifying `your.domain.name` as needed:
 
 ```bash
 <VirtualHost *:80>
@@ -134,38 +146,36 @@ sudo nvim /etc/apache2/sites-available/your.domain.name.conf
         AllowOverride All
         Order allow,deny
         Allow from all
-   </Directory>
+    </Directory>
 
-   TransferLog /var/log/apache2/your.domain.name_access.log
-   ErrorLog /var/log/apache2/your.domain.name_error.log
-
-</VirtualHost>  
+    TransferLog /var/log/apache2/your.domain.name_access.log
+    ErrorLog /var/log/apache2/your.domain.name_error.log
+</VirtualHost>
 ```
 
-* Enable the site
+- Enable the site.
 
 ```bash
 sudo a2ensite your.domain.name.conf
 ```
 
-### PHP
-
-+ You have to tweak certain lines in order to work nextcloud
+## PHP Configuration
+- Edit the PHP configuration file.
 
 ```bash
 sudo nano /etc/php/8.1/apache2/php.ini
 ```
 
-+ Within the file, locate and modify these parameters
+- Locate and modify the following parameters:
 
 ```php
-memory_limit = 3G #(Increase the value if you have more RAM)
-upload_max_filesize = 50G #(Increase/Decrease the value following your purposes)
+memory_limit = 3G # Increase if you have more RAM
+upload_max_filesize = 50G # Adjust based on your needs
 max_execution_time = 3600
-post_max_size = 50G #(Increase/Decrease the value following your purposes)
-date.timezone = Europe/London #(View the link below to adjust your timezone)
+post_max_size = 50G # Adjust based on your needs
+date.timezone = Europe/London # Adjust your timezone
 opcache.enable=1
-opcache.interned_strings_buffer= 128
+opcache.interned_strings_buffer=128
 opcache.max_accelerated_files=10000
 opcache.memory_consumption=128
 opcache.save_comments=1
@@ -174,41 +184,42 @@ opcache.revalidate_freq=1
 
 [Timezones](https://www.php.net/manual/en/timezones.php)
 
-+ Enable PHP mods for Apache
+- Enable PHP modules for Apache.
 
 ```bash
 sudo a2enmod dir env headers mime rewrite ssl
 ```
 
-+ Restart Apache
+- Restart Apache.
 
 ```bash
 sudo systemctl restart apache2
 ```
 
-### Set-up Nextcloud web server
+## Set Up Nextcloud Web Server
+- Upon first access, you will see a setup page.
 
-- When you first enter the page you should see something like this
 ![admin.png](pictures/admin.png)
-- Enter the following information into the respective boxes
+
+- Enter the following information:
+
 ```txt
-Username --> Your Username
-Password --> Set a secure password to login into Nextcloud
-
+Username --> Your desired username
+Password --> Set a secure password
 Data Folder --> Leave as default
-
 Database user --> nextcloud
-Database password --> nextcloud_db password
+Database password --> Your database password
 Database name --> nextcloud
 ```
 
-+ Then, Install the recommended apps
+- Install the recommended apps.
 
-### ***Optional***
+## Optional: External Access
 
-+ As mentioned earlier, to establish a connection to your Nextcloud from outside your private network, you need to enable port forwarding on your router
-+ In order to proceed, in this example, I configure my port forwarding on a Movistar router
-+ The first thing you need to do is search for your private IP using the following command
+- To access Nextcloud from outside your private network, enable port forwarding on your router.
+- Example configuration for a Movistar router:
+
+1. Find your private IP using:
 
 ```bash
 ifconfig -a
@@ -216,83 +227,66 @@ ifconfig -a
 
 ![ifconfig.png](pictures/ifconfig.png)
 
-+ Next, enter your router portal to configure the port forwarding. Enter the IP address and select 'web-server' at port 80, then enable it
-+ To check if your port 80 is open, run the following command
+2. Configure port forwarding in your router settings, enabling port 80 for your IP.
+3. Verify port 80 is open:
 
-  ```bash
-  sudo nmap -n -PN -sT -sU -p80 {IP}
-  ```
-+ Check if the nextcloud page is accessible typing your public IP on the web browser
-  - You should see something like this
+```bash
+sudo nmap -n -PN -sT -sU -p80 {IP}
+```
+
+4. Check if the Nextcloud page is accessible by entering your public IP in a web browser.
 
 ![untrusted.png](pictures/untrusted.png)
 
+### Extra Configuration
+- To access Nextcloud via your public IP, edit the `config.php` file:
 
-#### *Extra*
-- If you want to access to your nextcloud through your public IP 
-+ Edit ```config.php```
-
-  ```bash
-  sudo nvim /var/www/your.domain.name/config/config.php
-  ```
-+ On trusted_domains add your public IP
-  
-![trusted.png](pictures/trusted.png)
-
-#### Configure your domain
-
-- Initially, you require a domain, which can be either purchased or obtained for free
-- Several websites provide affordable domain options
-  	- [Namecheap](https://www.namecheap.com)
-  	- [Cloudflare](https://www.cloudflare.com)
-  	- [Squarespace](https://domains.squarespace.com)
-  	- [Name.com](https://www.name.com)
-
-#### Set-up Namecheap
-- Once you've acquired a domain, proceed to the Advanced DNS settings and establish a host record
-- In the ```IP Address``` section, input your public IP address
-- Then, on the ```HOST``` section put "@"
-  ![namecheap_host.png](pictures/namecheap_host.png)
-- Proceed to edit the `config.php` file
-
-```Bash
+```bash
 sudo nvim /var/www/your.domain.name/config/config.php
 ```
 
-- Add your domain name to the `trusted_domains` array
+- Add your public IP to the `trusted_domains` array.
+
+![trusted.png](pictures/trusted.png)
+
+## Configure Your Domain
+
+- Purchase or obtain a domain from providers like:
+  - [Namecheap](https://www.namecheap.com)
+  - [Cloudflare](https://www.cloudflare.com)
+  - [Squarespace](https://domains.squarespace.com)
+  - [Name.com](https://www.name.com)
+
+### Set Up Namecheap
+1. In Advanced DNS settings, create a host record with your public IP.
+2. Edit the `config.php` file to add your domain to the `trusted_domains` array.
+
+![namecheap_host.png](pictures/namecheap_host.png)
 ![domain_trusted.png](pictures/domain_trusted.png)
 
-+ Now, you can access to Nextcloud through your domain
+## TLS Certificate
 
-### TLS certificate
-
-+ Install snapd
+- Install `snapd` and `certbot`:
 
 ```bash
 sudo apt install snapd
 sudo snap install core && sudo snap refresh core
-```
-
-+ Install certbot
-
-```bash
 sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
 ```
 
-+ Get and install your certificates
+- Obtain and install your certificates:
 
 ```bash
- sudo certbot --apache
+sudo certbot --apache
 ```
 
 ## Troubleshooting
-- For troubleshooting, search the internet. Most forums typically have solutions
-- I case that you don't know how to solve the problem. Please feel free to contact me via [email](mailto:gerardo.vallejosc@usm.cl)
+- Search online forums for solutions.
+- For further assistance, contact me via [email](mailto:boxy_lecturer710@simplelogin.com).
 
 ## Resources
 - [Nextcloud Documentation](https://docs.nextcloud.com/)
 - [Nextcloud Community](https://help.nextcloud.com/)
-	- Feel free to ask anything, is a wonderful community
 
-**In case of any errors or suggestions, please submit a pull request**
+**Please submit a pull request for any errors or suggestions.**
