@@ -22,7 +22,7 @@ sudo apt autoremove
 
 ### Install Necessary Packages
 ```bash
-sudo apt install neovim wget mariadb-server php php-apcu php-bcmath php-cli php-common php-curl php-gd php-gmp php-imagick php-intl php-mbstring php-mysql php-zip php-xml unzip nmap
+sudo apt install apache2 libapache2-mod-php neovim wget mariadb-server php php-apcu php-bcmath php-bz2 php-cli php-common php-curl php-gd php-gmp php-imagick php-intl php-mbstring php-mysql php-zip php-xml unzip nmap ffmpeg
 ```
 
 ### Update Your Hostname (Optional)
@@ -99,12 +99,12 @@ FLUSH PRIVILEGES;
 
 - Exit by pressing `CTRL+D`.
 
-## Apache Web Server
+## Deploy Nextcloud Files
 
 - Enable the necessary PHP extensions.
 
 ```bash
-sudo phpenmod bcmath gmp imagick intl
+sudo phpenmod bcmath bz2 gmp imagick intl
 ```
 
 - Unzip the Nextcloud file.
@@ -160,10 +160,10 @@ sudo a2ensite your.domain.name.conf
 ```
 
 ## PHP Configuration
-- Edit the PHP configuration file.
+- Edit the PHP configuration file (replace 8.3 with your PHP version if different).
 
 ```bash
-sudo nano /etc/php/8.1/apache2/php.ini
+sudo nano /etc/php/8.3/apache2/php.ini
 ```
 
 - Locate and modify the following parameters:
@@ -196,7 +196,55 @@ sudo a2enmod dir env headers mime rewrite ssl
 sudo systemctl restart apache2
 ```
 
+## Network Configuration
+To access Nextcloud securely, you should configure your network and domain before completing the installation.
+
+### Port Forwarding (For Home Servers)
+- Enable port forwarding on your router for ports 80 (HTTP) and 443 (HTTPS) to your server's IP address.
+- Example configuration for a Movistar router:
+
+1. Find your private IP using:
+
+```bash
+ifconfig -a
+```
+
+![ifconfig.png](pictures/ifconfig.png)
+
+2. Configure port forwarding in your router settings.
+3. Verify ports are open:
+
+```bash
+sudo nmap -n -PN -sT -sU -p80,443 {IP}
+```
+
+### Configure Your Domain (Optional but Recommended)
+
+- Purchase or obtain a domain from providers like Namecheap, Cloudflare, etc.
+- In your DNS settings, create an `A` record pointing to your public IP.
+
+![namecheap_host.png](pictures/namecheap_host.png)
+
+## TLS Certificate (HTTPS)
+
+- Secure your installation with a free certificate from Let's Encrypt.
+- Install `snapd` and `certbot`:
+
+```bash
+sudo apt install snapd
+sudo snap install core && sudo snap refresh core
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+```
+
+- Obtain and install your certificates:
+
+```bash
+sudo certbot --apache
+```
+
 ## Set Up Nextcloud Web Server
+- Access your Nextcloud instance via your domain (e.g., `https://your.domain.name`).
 - Upon first access, you will see a setup page.
 
 ![admin.png](pictures/admin.png)
@@ -214,76 +262,47 @@ Database name --> nextcloud
 
 - Install the recommended apps.
 
-## Optional: External Access
+## Post-Installation Optimization
 
-- To access Nextcloud from outside your private network, enable port forwarding on your router.
-- Example configuration for a Movistar router:
-
-1. Find your private IP using:
+### Background Jobs
+- Set up a cron job for the `www-data` user to execute background tasks.
 
 ```bash
-ifconfig -a
+sudo crontab -u www-data -e
 ```
 
-![ifconfig.png](pictures/ifconfig.png)
+- Add the following line to the file:
 
-2. Configure port forwarding in your router settings, enabling port 80 for your IP.
-3. Verify port 80 is open:
-
-```bash
-sudo nmap -n -PN -sT -sU -p80 {IP}
+```cron
+*/5  *  *  *  * php -f /var/www/your.domain.name/cron.php
 ```
 
-4. Check if the Nextcloud page is accessible by entering your public IP in a web browser.
-
-![untrusted.png](pictures/untrusted.png)
-
-### Extra Configuration
-- To access Nextcloud via your public IP, edit the `config.php` file:
+### Memory Caching
+- Enable APCu for local caching by editing the config file.
 
 ```bash
 sudo nvim /var/www/your.domain.name/config/config.php
 ```
 
-- Add your public IP to the `trusted_domains` array.
+- Add the following line to the configuration array:
+
+```php
+'memcache.local' => '\OC\Memcache\APCu',
+```
+
+### Trusted Domains (If Needed)
+- If you change your domain or IP later, edit `config.php`:
+
+```bash
+sudo nvim /var/www/your.domain.name/config/config.php
+```
+
+- Add your new domain or IP to the `trusted_domains` array.
 
 ![trusted.png](pictures/trusted.png)
 
-## Configure Your Domain
-
-- Purchase or obtain a domain from providers like:
-  - [Namecheap](https://www.namecheap.com)
-  - [Cloudflare](https://www.cloudflare.com)
-  - [Squarespace](https://domains.squarespace.com)
-  - [Name.com](https://www.name.com)
-
-### Set Up Namecheap
-1. In Advanced DNS settings, create a host record with your public IP.
-2. Edit the `config.php` file to add your domain to the `trusted_domains` array.
-
-![namecheap_host.png](pictures/namecheap_host.png)
-![domain_trusted.png](pictures/domain_trusted.png)
-
-## TLS Certificate
-
-- Install `snapd` and `certbot`:
-
-```bash
-sudo apt install snapd
-sudo snap install core && sudo snap refresh core
-sudo snap install --classic certbot
-sudo ln -s /snap/bin/certbot /usr/bin/certbot
-```
-
-- Obtain and install your certificates:
-
-```bash
-sudo certbot --apache
-```
-
 ## Troubleshooting
 - Search online forums for solutions.
-- For further assistance, contact me via [email](mailto:boxy_lecturer710@simplelogin.com).
 
 ## Resources
 - [Nextcloud Documentation](https://docs.nextcloud.com/)
